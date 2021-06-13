@@ -39,6 +39,7 @@
 #include "MacOSCGGrabber.hpp"
 #include "MacOSAVGrabber.h"
 #include "D3D10Grabber.hpp"
+#include "NvFBCGrabber.hpp"
 #include "GrabManager.hpp"
 #include "BlueLightReduction.hpp"
 #ifdef Q_OS_WIN
@@ -309,6 +310,12 @@ void GrabManager::onGrabGammaChanged(double gamma)
 	m_gamma = gamma;
 }
 
+void GrabManager::onDownscaleFactorChange(int change)
+{
+	DEBUG_LOW_LEVEL << Q_FUNC_INFO << change;
+	emit changeDownscaleFactor(change);
+}
+
 void GrabManager::onSendDataOnlyIfColorsEnabledChanged(bool state)
 {
 	DEBUG_LOW_LEVEL << Q_FUNC_INFO << state;
@@ -360,6 +367,7 @@ void GrabManager::settingsProfileChanged(const QString &profileName)
 	m_isApplyColorTemperature = Settings::isGrabApplyColorTemperatureEnabled();
 	m_colorTemperature = Settings::getGrabColorTemperature();
 	m_gamma = Settings::getGrabGamma();
+	emit changeDownscaleFactor(Settings::getDownscaleFactor());
 
 	setNumberOfLeds(Settings::getNumberOfLeds(Settings::getConnectedDevice()));
 }
@@ -635,6 +643,12 @@ void GrabManager::initGrabbers()
 	DDuplGrabber* dDuplGrabber = new DDuplGrabber(NULL, m_grabberContext);
 	m_grabbers[Grab::GrabberTypeDDupl] = initGrabber(dDuplGrabber);
 	connect(this, &GrabManager::onSessionChange, dDuplGrabber, &DDuplGrabber::onSessionChange);
+#endif
+
+#ifdef NVFBC_GRAB_SUPPORT
+	NvFBCGrabber* nvFBCGrabber = new NvFBCGrabber(NULL, m_grabberContext);
+	m_grabbers[Grab::GrabberTypeNvFBC] = initGrabber(nvFBCGrabber);
+	connect(this, SIGNAL(changeDownscaleFactor(int)), nvFBCGrabber, SLOT(onDownscaleFactorChange(int)));
 #endif
 
 #ifdef X11_GRAB_SUPPORT
